@@ -6,6 +6,82 @@ import XCTest
 
 final class SearchTests: XCTestCase {
     @MainActor
+    func testClearHistoryRefreshesRecentsAndPreservesSearchResults() async throws {
+        let fixture = try makeFixture("""
+        cleared=false
+        while IFS= read -r request; do
+          case "$request" in
+            *clear_recent*) cleared=true; printf '%s\\n' '{"ok":true}' ;;
+            *recent*)
+              if [ "$cleared" = true ]; then
+                printf '%s\\n' '{"ok":true,"hits":[]}'
+              else
+                printf '%s\\n' '{"ok":true,"hits":[{"path":"/tmp/recent"}]}'
+              fi ;;
+            *) printf '%s\\n' '{"ok":true,"hits":[{"path":"/tmp/search"}]}' ;;
+          esac
+        done
+        """)
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let suite = "FSearchTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let client = SearchClient()
+        defer { client.close() }
+        let model = SearchModel(defaults: defaults, client: client)
+        model.executablePath = fixture.path
+        func waitForSearch() async throws {
+            let deadline = Date().addingTimeInterval(3)
+            while model.isSearching, Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
+            XCTAssertFalse(model.isSearching)
+        }
+        model.search()
+        try await waitForSearch()
+        XCTAssertEqual(model.selectedHit?.path, "/tmp/recent")
+        await model.clearHistory()
+        XCTAssertTrue(model.results.isEmpty)
+        XCTAssertNil(model.selection)
+        XCTAssertNil(model.error)
+        XCTAssertFalse(model.isClearingHistory)
+        XCTAssertTrue(model.showRecentlyOpened)
+        model.search()
+        try await waitForSearch()
+        XCTAssertTrue(model.results.isEmpty, "Cleared history must remain empty when reloaded")
+
+        model.query = "needle"
+        model.search()
+        try await waitForSearch()
+        await model.clearHistory()
+        XCTAssertEqual(model.selectedHit?.path, "/tmp/search")
+        let request = SearchRequest.search(query: "", mode: .names, scope: nil)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
+        XCTAssertEqual(json["opened_only"] as? Bool, true)
+    }
+
+    @MainActor
+    func testFailedHistoryClearKeepsVisibleItems() async throws {
+        let fixture = try makeFixture("""
+        while IFS= read -r request; do
+          printf '%s\\n' '{"ok":false,"error":"Cannot save history"}'
+        done
+        """)
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let suite = "FSearchTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let client = SearchClient()
+        defer { client.close() }
+        let model = SearchModel(defaults: defaults, client: client)
+        model.executablePath = fixture.path
+        model.results = [SearchHit(path: "/tmp/recent")]
+        model.selection = "/tmp/recent"
+        await model.clearHistory()
+        XCTAssertEqual(model.selectedHit?.path, "/tmp/recent")
+        XCTAssertTrue(model.error?.contains("Cannot save history") == true)
+        XCTAssertFalse(model.isClearingHistory)
+    }
+
+    @MainActor
     func testClickingResultsTransfersKeyboardFocusFromSearchField() throws {
         _ = NSApplication.shared
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),

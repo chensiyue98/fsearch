@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 APP="$ROOT/dist/FSearch.app"
 ENGINE="${FSEARCH_BINARY:-$ROOT/target/release/fsearch}"
 GUI_ONLY=false

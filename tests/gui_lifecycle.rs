@@ -65,6 +65,22 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn recent_history_can_be_cleared_through_the_gui_protocol() {
+    let mut fixture = Fixture::new();
+    fixture.start();
+    let path = fixture.root.join("opened.txt");
+    std::fs::write(&path, "example").unwrap();
+    assert_eq!(fixture.query(&serde_json::json!({"op": "open", "path": path}).to_string())["ok"], true);
+    let recent = r#"{"op":"recent","opened_only":true}"#;
+    assert_eq!(fixture.query(recent)["hits"].as_array().unwrap().len(), 1);
+    let cleared = fixture.query(r#"{"op":"clear_recent"}"#);
+    assert_eq!(cleared["ok"], true);
+    assert_eq!(cleared["cleared"], 1);
+    assert!(fixture.query(recent)["hits"].as_array().unwrap().is_empty());
+    assert!(std::fs::read(fixture.root.join("Library/Application Support/FSearch/frecency")).unwrap().is_empty());
+}
+
+#[test]
 fn gui_service_exits_on_parent_eof_and_bridge_never_respawns_it() {
     let mut fixture = Fixture::new();
     fixture.start();

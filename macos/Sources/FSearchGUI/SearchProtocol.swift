@@ -74,6 +74,7 @@ struct SearchRequest: Encodable, Sendable {
     var mode: String?
     var path: String?
     var progress: Bool?
+    var openedOnly: Bool?
     var kind: String?
     var fileType: String?
     var ext: String?
@@ -84,11 +85,12 @@ struct SearchRequest: Encodable, Sendable {
         case op, q, pattern, limit, offset, cursor, mode, path, progress, kind, ext, mtime, size
         case scope = "in"
         case fileType = "type"
+        case openedOnly = "opened_only"
     }
 
     static func search(query: String, mode: SearchMode, scope: String?, next: Int? = nil, filters: SearchFilters = SearchFilters()) -> Self {
         let empty = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if empty && !filters.isActive { return Self(op: "recent", scope: scope) }
+        if empty && !filters.isActive { return Self(op: "recent", scope: scope, openedOnly: true) }
         var request: Self
         if empty || mode == .names {
             request = Self(q: empty ? "" : query, scope: scope, offset: next ?? 0)

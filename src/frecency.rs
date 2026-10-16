@@ -88,6 +88,35 @@ impl Frecency {
         map.iter().filter(|(p, _)| inside(p)).map(|(p, &e)| (p.clone(), decayed(e, now))).collect()
     }
 
+    /// Clear recorded opens durably, serialized with pending saves and new opens.
+    pub fn clear(&self) -> std::io::Result<usize> {
+        let mut map = self.map.lock().unwrap();
+        self.write_file(&HashMap::new())?;
+        let count = map.len();
+        map.clear();
+        Ok(count)
+    }
+
+    // Call with the map locked so an older delayed save cannot restore cleared entries.
+    fn write_file(&self, map: &HashMap<Vec<u8>, (f32, u32)>) -> std::io::Result<()> {
+        let mut out = Vec::new();
+        for (p, &(s, t)) in map.iter() {
+            // Escape paths containing newlines or starting with a quote.
+            let quoted = (p.contains(&b'\n') || p.first() == Some(&b'"'))
+                .then(|| std::str::from_utf8(p).ok().map(|p| serde_json::json!(p).to_string()));
+            let p = match &quoted {
+                None => &p[..],
+                Some(Some(q)) => q.as_bytes(),
+                Some(None) => continue,
+            };
+            out.extend_from_slice(format!("{s:.3}\t{t}\t").as_bytes());
+            out.extend_from_slice(p);
+            out.push(b'\n');
+        }
+        let tmp = self.file.with_extension("new");
+        std::fs::write(&tmp, out).and_then(|_| std::fs::rename(&tmp, &self.file))
+    }
+
     /// Write the file a couple of seconds after a change (one write for a
     /// burst of opens), dropping what decayed away.
     fn save_soon(self: &Arc<Self>) {
@@ -99,27 +128,9 @@ impl Frecency {
             std::thread::sleep(std::time::Duration::from_secs(2));
             me.saving.store(false, Ordering::Relaxed);
             let now = fsearch::query::now_secs();
-            let mut out = Vec::new();
-            {
-                let mut map = me.map.lock().unwrap();
-                map.retain(|_, e| decayed(*e, now) >= FLOOR);
-                for (p, &(s, t)) in map.iter() {
-                    // One line each: a path with a newline (or starting
-                    // with a quote) as a JSON string, if it's UTF-8.
-                    let quoted = (p.contains(&b'\n') || p.first() == Some(&b'"'))
-                        .then(|| std::str::from_utf8(p).ok().map(|p| serde_json::json!(p).to_string()));
-                    let p = match &quoted {
-                        None => &p[..],
-                        Some(Some(q)) => q.as_bytes(),
-                        Some(None) => continue,
-                    };
-                    out.extend_from_slice(format!("{s:.3}\t{t}\t").as_bytes());
-                    out.extend_from_slice(p);
-                    out.push(b'\n');
-                }
-            }
-            let tmp = me.file.with_extension("new");
-            if let Err(e) = std::fs::write(&tmp, out).and_then(|_| std::fs::rename(&tmp, &me.file)) {
+            let mut map = me.map.lock().unwrap();
+            map.retain(|_, e| decayed(*e, now) >= FLOOR);
+            if let Err(e) = me.write_file(&map) {
                 eprintln!("{now} frecency: save failed: {e}");
             }
         });
@@ -129,6 +140,36 @@ impl Frecency {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn clear_persists_and_pending_save_does_not_restore_history() {
+        let dir = std::env::temp_dir().join(format!("fsearch-clear-frecency-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("frecency");
+        let f = Frecency::load(file.clone());
+        let now = fsearch::query::now_secs();
+        f.open(b"/old", now);
+        assert_eq!(f.clear().unwrap(), 1);
+        assert!(f.under(b"/", now).is_empty());
+        assert!(Frecency::load(file.clone()).under(b"/", now).is_empty());
+        f.open(b"/new", now);
+        std::thread::sleep(std::time::Duration::from_millis(2500));
+        let saved = Frecency::load(file);
+        assert_eq!(saved.score(b"/old", now), 0.0);
+        assert_eq!(saved.score(b"/new", now), 1.0);
+        assert_eq!(f.clear().unwrap(), 1);
+        assert_eq!(f.clear().unwrap(), 0);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn failed_clear_preserves_history() {
+        let f = Frecency::load(std::env::temp_dir().join(format!("fsearch-missing-{}", std::process::id())).join("frecency"));
+        // Seed directly so the failure test doesn't schedule a background write.
+        f.map.lock().unwrap().insert(b"/old".to_vec(), (1.0, 100));
+        assert!(f.clear().is_err());
+        assert_eq!(f.score(b"/old", 100), 1.0);
+    }
 
     #[test]
     fn decays_and_persists() {

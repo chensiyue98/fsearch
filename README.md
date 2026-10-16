@@ -60,8 +60,10 @@ required. The default architecture is the build Mac's architecture.
 
 The Xcode build phase finds Cargo in `~/.cargo/bin` or Homebrew locations.
 If Cargo is unavailable, it automatically bundles this checkout's existing
-`target/release/fsearch`, with a warning that Rust source changes are not
-being rebuilt. Install a Rust toolchain to rebuild the engine, or add a
+`target/release/fsearch` only if it is at least as new as the Rust sources;
+otherwise the build stops to prevent shipping a new UI with an outdated engine.
+Both build scripts honor `CARGO_HOME` when locating Cargo.
+Install a Rust toolchain to rebuild the engine, or add a
 user-defined `FSEARCH_BINARY` build setting with the absolute path to another
 existing engine. The engine must
 support `embedded-gui` and match the app's architecture. Xcode
@@ -91,7 +93,8 @@ engine and service lifecycles are covered by `cargo test --test gui_lifecycle`.
 - Inspect file metadata or matching lines, double-click or press Return to
   open, press Space while the results list is focused for Quick Look,
   reveal in Finder with ⌘R, and focus search with ⌘F.
-- An empty search shows files opened through FSearch and other engine recents.
+- An empty search shows files and folders opened through FSearch and other engine clients.
+  Hover over the count beside Recently opened to reveal ×; click it to permanently clear recorded opens.
   Turn off **Show recently opened** in Settings to leave empty searches blank;
   the preference persists and does not affect keyword searches.
 - Settings (⌘,) shows the live indexing stage, file and text counts, index
@@ -200,6 +203,8 @@ JSON lines over `~/Library/Application Support/FSearch/fsearch.sock`, or
 `open` tells it what you opened; `"boost": true` ranks those higher for a
 while, `near` favors files close to the one you're in, and `recent` lists
 what you worked on lately. `"git": true` adds each hit's git status.
+Use `"opened_only": true` on `recent` to exclude commit history.
+`{"op":"clear_recent"}` permanently clears all recorded opens, across folders.
 
 For coding agents, `fsearch mcp` is an MCP server on stdio with
 `find_files`, `grep` and `multi_grep`.

@@ -10,6 +10,7 @@ final class SearchModel: ObservableObject {
     @Published var results: [SearchHit] = []
     @Published var selection: String?
     @Published var isSearching = false
+    @Published var isClearingHistory = false
     @Published var error: String?
     @Published var next: Int?
     @Published var tookMicroseconds: Double?
@@ -127,6 +128,36 @@ final class SearchModel: ObservableObject {
         revision += 1
         task?.cancel()
         await client.shutdown()
+    }
+
+    func clearHistory() async {
+        guard !isShuttingDown, !isClearingHistory else { return }
+        isClearingHistory = true
+        defer { isClearingHistory = false }
+        if !hasSearchCriteria {
+            task?.cancel()
+            revision += 1
+            isSearching = false
+        }
+        do {
+            let executable = SearchClient.locateExecutable(customPath: executablePath)
+            _ = try await client.request(SearchRequest(op: "clear_recent"), executable: executable)
+            guard !isShuttingDown else { return }
+            if !hasSearchCriteria {
+                // Invalidate any recents request started while clearing was in flight.
+                task?.cancel()
+                revision += 1
+                results = []
+                selection = nil
+                next = nil
+                tookMicroseconds = nil
+                isSearching = false
+                error = nil
+            }
+        } catch {
+            guard !isShuttingDown else { return }
+            self.error = "Could not clear history: \(error.localizedDescription)"
+        }
     }
 
     func refreshIndexStatus() async {

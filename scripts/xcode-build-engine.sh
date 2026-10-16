@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DESTINATION="${TARGET_BUILD_DIR:?Run this script from the Xcode project}/${CONTENTS_FOLDER_PATH:?}/MacOS/fsearch"
-export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 if [[ -n "${FSEARCH_BINARY:-}" ]]; then
     ENGINE="$FSEARCH_BINARY"
@@ -22,6 +22,11 @@ elif command -v cargo >/dev/null 2>&1; then
     if [[ "$ENGINE" != /* ]]; then ENGINE="$ROOT/$ENGINE"; fi
 elif [[ -x "$ROOT/target/release/fsearch" ]]; then
     ENGINE="$ROOT/target/release/fsearch"
+    NEWER_SOURCE="$(find "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$ROOT/.cargo/config.toml" -type f -newer "$ENGINE" -print -quit)"
+    if [[ -n "$NEWER_SOURCE" ]]; then
+        echo "error: The existing fsearch engine is older than the Rust source ($NEWER_SOURCE). Install Rust and rebuild, or set FSEARCH_BINARY to a matching rebuilt engine. Refusing to bundle an outdated engine." >&2
+        exit 1
+    fi
     echo "warning: Rust is not installed. Bundling the existing target/release/fsearch engine; Rust source changes will not be rebuilt."
 else
     echo "error: No Rust toolchain or previously built engine was found. Install Rust with rustup, or set FSEARCH_BINARY to an existing fsearch executable." >&2

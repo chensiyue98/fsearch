@@ -274,11 +274,22 @@ fn run(v: &Value, cx: &Ctx) -> Result<Reply, String> {
             let scores: Vec<f32> = paths.iter().map(|p| cx.frecency.open(&real(p), now)).collect();
             Ok(Reply::Value(json!({"ok": true, "scores": scores})))
         }
+        "clear_recent" => {
+            let cleared = cx.frecency.clear().map_err(|e| format!("Could not clear recent history: {e}"))?;
+            Ok(Reply::Value(json!({"ok": true, "cleared": cleared})))
+        }
         "recent" => {
             // What you worked on lately (under `in:`, passing the query),
             // best first: opens and your commits (see `frecent`).
             let (q, _) = parse_request(v, engine.home())?;
-            let top = frecent(cx, q.scope.as_deref(), fsearch::query::now_secs());
+            let now = fsearch::query::now_secs();
+            let top = if v.get("opened_only") == Some(&Value::Bool(true)) {
+                let mut top = cx.frecency.under(q.scope.as_deref().unwrap_or(b"/"), now);
+                top.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                top
+            } else {
+                frecent(cx, q.scope.as_deref(), now)
+            };
             let hits = top.into_iter().filter_map(|(p, s)| Some(Found { score: (s * 100.0) as i32, ..found(&q, &p)? }));
             Ok(Reply::Hits(hits.take(q.limit).collect(), 0, None, v.get("git") == Some(&Value::Bool(true))))
         }

@@ -9,6 +9,7 @@ struct SearchView: View {
     @State private var showHelp = false
     @State private var showFilters = false
     @State private var previewURL: URL?
+    @State private var clearHistoryHovered = false
     @AppStorage("resultListStyle") private var resultListStyle = ResultListStyle.detailed
 
     var body: some View {
@@ -169,7 +170,29 @@ struct SearchView: View {
                 Image(systemName: model.hasSearchCriteria ? "list.bullet" : "clock")
                 Text(model.hasSearchCriteria ? "Search results" : model.showRecentlyOpened ? "Recently opened" : "Files")
                 Spacer()
-                if !model.results.isEmpty {
+                if !model.hasSearchCriteria, model.showRecentlyOpened, !model.results.isEmpty {
+                    Button { Task { await model.clearHistory() } } label: {
+                        ZStack {
+                            // Keep the count's width reserved while showing the clear action.
+                            Text(model.results.count.formatted()).monospacedDigit()
+                                .opacity(clearHistoryHovered || model.isClearingHistory ? 0 : 1)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .semibold))
+                                .opacity(clearHistoryHovered && !model.isClearingHistory ? 1 : 0)
+                            if model.isClearingHistory {
+                                ProgressView().controlSize(.mini).frame(width: 12, height: 12)
+                            }
+                        }
+                        .animation(.easeOut(duration: 0.12), value: clearHistoryHovered)
+                    }
+                        .buttonStyle(ClearHistoryButtonStyle(isHovered: clearHistoryHovered))
+                        .onHover { clearHistoryHovered = $0 }
+                        .onDisappear { clearHistoryHovered = false }
+                        .disabled(model.isClearingHistory)
+                        .accessibilityLabel("Clear history")
+                        .accessibilityValue("\(model.results.count) recently opened items")
+                        .help("Clear all recently opened history")
+                } else if !model.results.isEmpty {
                     Text(model.results.count.formatted()).monospacedDigit()
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(Color.primary.opacity(0.05), in: Capsule())
@@ -371,6 +394,24 @@ struct SearchView: View {
             }
         }
         .padding(20).frame(width: 360)
+    }
+}
+
+private struct ClearHistoryButtonStyle: ButtonStyle {
+    var isHovered: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 7)
+            .frame(minWidth: 28, minHeight: 24)
+            .foregroundStyle(isHovered || configuration.isPressed ? Color.primary : Color.secondary)
+            .background {
+                Capsule().fill(Color.primary.opacity(configuration.isPressed ? 0.16 : isHovered ? 0.09 : 0.05))
+            }
+            .contentShape(Capsule())
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.12), value: isHovered)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
