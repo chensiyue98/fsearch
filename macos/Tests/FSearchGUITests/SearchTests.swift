@@ -210,24 +210,6 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(pdf["ext"] as? String, "pdf")
     }
 
-    func testSortRequestsPreserveFiltersAndUseCorrectPaging() throws {
-        for sort in SearchSort.allCases {
-            let names = try json(.search(query: "report", mode: .names, scope: nil, next: 100,
-                filters: SearchFilters(kind: .pdf), sort: sort))
-            XCTAssertEqual(names["sort"] as? String, sort.parameter)
-            XCTAssertEqual(names["ext"] as? String, "pdf")
-            XCTAssertEqual(names["offset"] as? Int, 100)
-            let content = try json(.search(query: "literal.*", mode: .content, scope: nil, next: 231, sort: sort))
-            XCTAssertEqual(content["sort"] as? String, sort.parameter)
-            XCTAssertEqual(content["cursor"] as? Int, 231)
-            XCTAssertEqual(content["pattern"] as? String, "literal.*")
-            let recent = try json(.search(query: "", mode: .content, scope: nil, next: 100, sort: sort))
-            XCTAssertEqual(recent["op"] as? String, "recent", "Sorting alone must not turn recents into an unrestricted search")
-            XCTAssertEqual(recent["sort"] as? String, sort.parameter)
-            XCTAssertEqual(recent["offset"] as? Int, 100)
-        }
-    }
-
     func testRequestsPreserveScopeAndPagingSemantics() throws {
         let names = try json(.search(query: "ext:rs grep:hello", mode: .names, scope: "/a folder", next: 100))
         XCTAssertEqual(names["q"] as? String, "ext:rs grep:hello")

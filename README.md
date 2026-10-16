@@ -82,12 +82,8 @@ engine and service lifecycles are covered by `cargo test --test gui_lifecycle`.
   choose a folder, and load additional results.
 - Preset dropdowns narrow results by kind, modification time, and size.
   Combine them with names or literal content searches, or browse matching
-  files with no keywords. Filters starts collapsed; expand it to also sort
-  by relevance, name (A–Z/Z–A), modified time (newest/oldest), or size
-  (largest/smallest). Metadata sorting happens before pagination, including
-  content matches and recent items. Reset keeps the search text and folder.
-  Content searches with metadata ordering scan files in that order and may
-  be slower than the default indexed relevance search.
+  files with no keywords. Filters starts collapsed; expand it to change presets.
+  Clear filters keeps the search text and folder.
 - File names accepts the full query syntax below, including `grep:` and
   `regex:`. Contents treats the entire input as literal text, with smart case.
 - Inspect file metadata or matching lines, double-click or press Return to

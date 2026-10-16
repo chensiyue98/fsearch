@@ -38,7 +38,6 @@ struct SearchView: View {
         }
         .onChange(of: model.scope) { _ in model.search() }
         .onChange(of: model.filters) { _ in model.search() }
-        .onChange(of: model.sort) { _ in model.search() }
         .onChange(of: model.executablePath) { _ in model.search() }
         .background {
             Button("") { searchFocused = true }
@@ -75,29 +74,16 @@ struct SearchView: View {
                     Picker("Size", selection: $model.filters.size) {
                         ForEach(SearchFilters.Size.allCases) { Text($0.rawValue).tag($0) }
                     }
+                    if model.filters.isActive {
+                        Button("Clear filters") { model.filters = SearchFilters() }
+                            .help("Reset preset filters and keep the search text")
+                    }
                     Spacer(minLength: 0)
                 }
                 .pickerStyle(.menu)
                 .fixedSize(horizontal: true, vertical: false)
                 .controlSize(.small)
                 .padding(.top, 8)
-                HStack(spacing: 12) {
-                    Picker("Sort by", selection: $model.sort) {
-                        ForEach(SearchSort.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                    if activeFilterCount > 0 {
-                        Button("Reset") {
-                            model.filters = SearchFilters()
-                            model.sort = .relevance
-                        }
-                        .help("Reset filters and sorting, keeping search text and folder")
-                    }
-                    Spacer(minLength: 0)
-                }
-                .controlSize(.small)
-                .padding(.top, 4)
             } label: {
                 Label(activeFilterCount == 0 ? "Filters" : "Filters (\(activeFilterCount))", systemImage: "line.3.horizontal.decrease.circle")
                     .font(.caption)
@@ -120,7 +106,7 @@ struct SearchView: View {
     }
 
     private var activeFilterCount: Int {
-        [model.filters.kind != .all, model.filters.modified != .any, model.filters.size != .any, model.sort != .relevance]
+        [model.filters.kind != .all, model.filters.modified != .any, model.filters.size != .any]
             .filter { $0 }.count
     }
 
