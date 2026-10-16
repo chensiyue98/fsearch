@@ -80,6 +80,8 @@ engine and service lifecycles are covered by `cargo test --test gui_lifecycle`.
 
 - Search as you type, switch between fuzzy file names and literal contents,
   choose a folder, and load additional results.
+- The top-right list style menu switches between detailed rows and a compact,
+  single-line list. The chosen style is remembered across launches.
 - Preset dropdowns narrow results by kind, modification time, and size.
   Combine them with names or literal content searches, or browse matching
   files with no keywords. Filters starts collapsed; expand it to change presets.

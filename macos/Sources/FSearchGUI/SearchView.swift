@@ -8,6 +8,7 @@ struct SearchView: View {
     @State private var showHelp = false
     @State private var showFilters = false
     @State private var previewURL: URL?
+    @AppStorage("resultListStyle") private var resultListStyle = ResultListStyle.detailed
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +24,19 @@ struct SearchView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItemGroup {
+                Menu {
+                    Picker("List style", selection: $resultListStyle) {
+                        ForEach(ResultListStyle.allCases) { style in
+                            Label(style.title, systemImage: style.symbol).tag(style)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Image(systemName: resultListStyle.symbol)
+                }
+                .help("List style")
+                .accessibilityLabel("List style")
+                .accessibilityValue(resultListStyle.title)
                 Button { showHelp.toggle() } label: { Image(systemName: "questionmark.circle") }
                     .help("Query syntax")
                     .popover(isPresented: $showHelp) { queryHelp }
@@ -184,7 +198,7 @@ struct SearchView: View {
             } else {
                 List(selection: $model.selection) {
                     ForEach(model.results) { hit in
-                        ResultRow(hit: hit)
+                        ResultRow(hit: hit, style: resultListStyle)
                             .tag(hit.id)
                     }
                 }
@@ -358,27 +372,56 @@ struct SearchView: View {
     }
 }
 
+private enum ResultListStyle: String, CaseIterable, Identifiable {
+    case detailed, compact
+    var id: Self { self }
+    var title: String { self == .detailed ? "Detailed list" : "Compact list" }
+    var symbol: String { self == .detailed ? "list.bullet.rectangle" : "list.bullet" }
+}
+
 private struct ResultRow: View {
     let hit: SearchHit
+    let style: ResultListStyle
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: style == .compact ? 8 : 10) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: hit.path))
-                .resizable().scaledToFit().frame(width: 30, height: 30).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(hit.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                    .truncationMode(.middle)
-                Text(hit.parent).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                .resizable().scaledToFit()
+                .frame(width: style == .compact ? 18 : 30, height: style == .compact ? 18 : 30)
+                .accessibilityHidden(true)
+            if style == .compact {
+                Text(hit.name).font(.system(size: 12, weight: .medium))
+                    .lineLimit(1).truncationMode(.middle).layoutPriority(1)
+                Spacer(minLength: 12)
                 if let first = hit.matches?.first {
-                    Text("\(first.line): \(first.text.trimmingCharacters(in: .whitespacesAndNewlines))")
-                        .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                    matchingLine(first).frame(width: 140, alignment: .trailing)
+                } else {
+                    parentPath.frame(width: 140, alignment: .trailing)
                 }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(hit.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                        .truncationMode(.middle)
+                    parentPath
+                    if let first = hit.matches?.first { matchingLine(first) }
+                }
+                Spacer(minLength: 0)
+                if hit.kind == "dir" { Image(systemName: "folder").foregroundStyle(.tertiary) }
             }
-            Spacer(minLength: 0)
-            if hit.kind == "dir" { Image(systemName: "folder").foregroundStyle(.tertiary) }
         }
-        .padding(.vertical, 7)
+        .padding(.vertical, style == .compact ? 2 : 7)
         .help(hit.path)
         .contentShape(Rectangle())
+    }
+
+    private var parentPath: some View {
+        Text(hit.parent).font(.system(size: 11)).foregroundStyle(.secondary)
+            .lineLimit(1).truncationMode(.middle)
+    }
+
+    private func matchingLine(_ match: LineMatch) -> some View {
+        Text("\(match.line): \(match.text.trimmingCharacters(in: .whitespacesAndNewlines))")
+            .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
     }
 }
 
