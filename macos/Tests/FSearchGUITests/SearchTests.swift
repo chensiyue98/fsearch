@@ -6,6 +6,32 @@ import XCTest
 
 final class SearchTests: XCTestCase {
     @MainActor
+    func testSpacePreviewRequiresUnmodifiedSpaceAndListFocus() throws {
+        _ = NSApplication.shared
+        func event(keyCode: UInt16 = 49, flags: NSEvent.ModifierFlags = []) throws -> NSEvent {
+            try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags,
+                timestamp: 0, windowNumber: 0, context: nil, characters: " ",
+                charactersIgnoringModifiers: " ", isARepeat: false, keyCode: keyCode))
+        }
+        let list = NSTableView()
+        let row = NSView()
+        list.addSubview(row)
+        let editor = NSTextView()
+        list.addSubview(editor)
+        let space = try event()
+        XCTAssertTrue(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: list))
+        XCTAssertTrue(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: row))
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: editor))
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: NSTextField()))
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: NSButton()))
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: nil))
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(try event(keyCode: 36), responder: list))
+        for modifier: NSEvent.ModifierFlags in [.command, .control, .option, .shift] {
+            XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(try event(flags: modifier), responder: list))
+        }
+    }
+
+    @MainActor
     func testRecentlyOpenedPreferencePersistsAndRejectsLateReplies() async throws {
         let suite = "FSearchTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

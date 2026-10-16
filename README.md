@@ -87,7 +87,8 @@ engine and service lifecycles are covered by `cargo test --test gui_lifecycle`.
 - File names accepts the full query syntax below, including `grep:` and
   `regex:`. Contents treats the entire input as literal text, with smart case.
 - Inspect file metadata or matching lines, double-click or press Return to
-  open, reveal in Finder with ⌘R, and focus search with ⌘F.
+  open, press Space while the results list is focused for Quick Look,
+  reveal in Finder with ⌘R, and focus search with ⌘F.
 - An empty search shows files opened through FSearch and other engine recents.
   Turn off **Show recently opened** in Settings to leave empty searches blank;
   the preference persists and does not affect keyword searches.

@@ -1,4 +1,5 @@
 import AppKit
+import QuickLook
 import SwiftUI
 
 struct SearchView: View {
@@ -6,6 +7,7 @@ struct SearchView: View {
     @FocusState private var searchFocused: Bool
     @State private var showHelp = false
     @State private var showFilters = false
+    @State private var previewURL: URL?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,12 +23,14 @@ struct SearchView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItemGroup {
-                Button { model.chooseFolder() } label: { Image(systemName: "folder.badge.plus") }
-                    .help("Choose search folder (⇧⌘O)")
                 Button { showHelp.toggle() } label: { Image(systemName: "questionmark.circle") }
                     .help("Query syntax")
                     .popover(isPresented: $showHelp) { queryHelp }
             }
+        }
+        .quickLookPreview($previewURL)
+        .onChange(of: model.selection) { _ in
+            if previewURL != nil { previewURL = model.selectedHit?.url }
         }
         .task { searchFocused = true; await model.start() }
         .onReceive(NotificationCenter.default.publisher(for: .focusFSearch)) { _ in searchFocused = true }
@@ -186,11 +190,19 @@ struct SearchView: View {
                 }
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)
+                .background {
+                    ResultListPreviewShortcut {
+                        guard let hit = model.selectedHit else { return false }
+                        previewURL = previewURL == nil ? hit.url : nil
+                        return true
+                    }
+                }
                 // Use the list's native double-click action. A row-level
                 // double-tap recognizer delays its single-click selection.
                 .contextMenu(forSelectionType: String.self) { ids in
                     if let hit = model.results.first(where: { ids.contains($0.id) }) {
                         Button("Open") { model.open(hit) }
+                        Button("Quick Look") { previewURL = hit.url }
                         Button("Reveal in Finder") { model.reveal(hit) }
                         Button("Copy Path") { model.copyPath(hit) }
                     }
@@ -312,6 +324,7 @@ struct SearchView: View {
             else if model.incomplete { Text("· Partial results — continue with Load More") }
             Spacer(minLength: 8)
             HStack(spacing: 12) {
+                shortcutHint("Space", title: "Preview")
                 shortcutHint("↵", title: "Open")
                 shortcutHint("⌘R", title: "Reveal")
                 shortcutHint("⌘F", title: "Search")
@@ -366,5 +379,54 @@ private struct ResultRow: View {
         .padding(.vertical, 7)
         .help(hit.path)
         .contentShape(Rectangle())
+    }
+}
+
+/// Bridges list key handling on macOS 13 without installing an app-wide shortcut.
+struct ResultListPreviewShortcut: NSViewRepresentable {
+    var preview: () -> Bool
+
+    func makeNSView(context: Context) -> Observer { Observer(preview: preview) }
+    func updateNSView(_ view: Observer, context: Context) { view.preview = preview }
+
+    final class Observer: NSView {
+        var preview: () -> Bool
+        private var monitor: Any?
+
+        init(preview: @escaping () -> Bool) {
+            self.preview = preview
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self, let window = self.window,
+                      event.window === window, window.isKeyWindow,
+                      Self.shouldPreview(event, responder: window.firstResponder) else { return event }
+                if event.isARepeat { return nil }
+                return self.preview() ? nil : event
+            }
+        }
+
+        static func shouldPreview(_ event: NSEvent, responder: NSResponder?) -> Bool {
+            guard event.type == .keyDown, event.keyCode == 49,
+                  event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
+                  let view = responder as? NSView,
+                  !(view is NSTextView), !(view is NSTextField) else { return false }
+            // A selected result alone is insufficient: the list must own keyboard focus.
+            var ancestor: NSView? = view
+            while let current = ancestor {
+                if current is NSTableView { return true }
+                ancestor = current.superview
+            }
+            return false
+        }
+
+        deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
     }
 }
