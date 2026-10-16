@@ -56,6 +56,7 @@ fi
 # Remove the helper location used by older GUI builds.
 rm -f "$APP/Contents/Resources/fsearch"
 cp "$ROOT/macos/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/macos/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$APP"
 codesign --verify --deep --strict "$APP"
 echo "Built $APP"

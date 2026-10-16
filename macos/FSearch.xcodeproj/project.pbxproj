@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FB0000000000000000000001 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = FB0000000000000000000002 /* AppIcon.icns */; };
 		0C2F5E628D782128B3B4A6CE /* FSearchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2551265114C1BC3EF59E9C06 /* FSearchApp.swift */; };
 		14330A02AB0DACE672CC6B7D /* SearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FE3899A4C890F7FD89F9956 /* SearchModel.swift */; };
 		41E1C6234BECB7D99029D6E1 /* SearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899BFF49B18AA2CD6097A1F6 /* SearchTests.swift */; };
@@ -29,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FB0000000000000000000002 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		0651D93765F7DC1065DEC3A3 /* FSearch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FSearch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0EE8164E65968E18BAA7E2CB /* Cargo.toml */ = {isa = PBXFileReference; lastKnownFileType = text; name = Cargo.toml; path = ../Cargo.toml; sourceTree = "<group>"; };
 		1507F021100E808DBE2FAA00 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 		870B3294C0CBD48AF6BBCC1B = {
 			isa = PBXGroup;
 			children = (
+				FB0000000000000000000002 /* AppIcon.icns */,
 				8309DD304D804F9D7F6302F5 /* Sources/FSearchGUI */,
 				A619C04D8A87AB070162A099 /* Tests/FSearchGUITests */,
 				1507F021100E808DBE2FAA00 /* Info.plist */,
@@ -135,6 +138,7 @@
 			buildPhases = (
 				949D493B91791558E87BC5D7 /* Sources */,
 				BD92572B49AC16A86614498D /* Frameworks */,
+				FB0000000000000000000003 /* Resources */,
 				0B8377DDC3BC9F3DDB77262E /* Build and Embed Rust Engine */,
 			);
 			buildRules = (
@@ -182,6 +186,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FB0000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB0000000000000000000001 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		0B8377DDC3BC9F3DDB77262E /* Build and Embed Rust Engine */ = {
