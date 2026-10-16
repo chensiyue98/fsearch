@@ -50,6 +50,12 @@ final class SearchModel: ObservableObject {
     var hasSearchCriteria: Bool { !queryIsEmpty || filters.isActive }
     var selectedHit: SearchHit? { results.first { $0.id == selection } }
 
+    func moveSelection(by offset: Int) {
+        guard let index = results.firstIndex(where: { $0.id == selection }), !results.isEmpty else { return }
+        let nextIndex = min(max(index + offset, 0), results.count - 1)
+        selection = results[nextIndex].id
+    }
+
     /// Start the built-in engine as soon as the window appears.
     func start() async {
         guard !isShuttingDown else { return }

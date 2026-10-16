@@ -6,6 +6,100 @@ import XCTest
 
 final class SearchTests: XCTestCase {
     @MainActor
+    func testClickingResultsTransfersKeyboardFocusFromSearchField() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.contentView = nil; window.close() }
+        let content = try XCTUnwrap(window.contentView)
+        var focusTransfers = 0
+        let observer = ResultListPreviewShortcut.Observer(previewURL: nil, moveSelection: { _ in },
+            focusResults: { focusTransfers += 1 }, preview: { true })
+        observer.frame = NSRect(x: 0, y: 0, width: 300, height: 200)
+        content.addSubview(observer)
+        let table = NSTableView(frame: observer.frame)
+        final class ResultsDataSource: NSObject, NSTableViewDataSource {
+            func numberOfRows(in tableView: NSTableView) -> Int { 10 }
+        }
+        let dataSource = ResultsDataSource()
+        table.dataSource = dataSource
+        table.addTableColumn(NSTableColumn(identifier: NSUserInterfaceItemIdentifier("result")))
+        table.reloadData()
+        table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        let scrollView = NSScrollView(frame: observer.frame)
+        scrollView.documentView = table
+        content.addSubview(scrollView)
+        let search = NSTextField(frame: NSRect(x: 0, y: 240, width: 300, height: 24))
+        content.addSubview(search)
+        XCTAssertTrue(window.makeFirstResponder(search))
+        XCTAssertTrue(window.firstResponder is NSTextView)
+
+        func click(at point: NSPoint, count: Int = 1) throws -> NSEvent {
+            try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [],
+                timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: count, pressure: 1))
+        }
+        observer.focusListForClick(try click(at: NSPoint(x: 50, y: 50)))
+        XCTAssertTrue(window.firstResponder === table)
+        XCTAssertEqual(focusTransfers, 1)
+        let space = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+            timestamp: 0, windowNumber: window.windowNumber, context: nil, characters: " ",
+            charactersIgnoringModifiers: " ", isARepeat: false, keyCode: 49))
+        XCTAssertTrue(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: window.firstResponder))
+
+        // Re-clicking an already selected result must also recover focus, including double-clicks.
+        XCTAssertTrue(window.makeFirstResponder(search))
+        observer.focusListForClick(try click(at: NSPoint(x: 50, y: 50), count: 2))
+        XCTAssertTrue(window.firstResponder === table)
+        XCTAssertEqual(focusTransfers, 2)
+        XCTAssertEqual(table.selectedRow, 0)
+
+        XCTAssertTrue(window.makeFirstResponder(search))
+        observer.focusListForClick(try click(at: NSPoint(x: 50, y: 250)))
+        XCTAssertTrue(window.firstResponder is NSTextView)
+        XCTAssertEqual(focusTransfers, 2)
+        XCTAssertFalse(ResultListPreviewShortcut.Observer.shouldPreview(space, responder: window.firstResponder))
+        XCTAssertEqual(search.stringValue, "")
+    }
+
+    @MainActor
+    func testPreviewArrowNavigationMovesSelectionAndStopsAtBoundaries() throws {
+        _ = NSApplication.shared
+        let model = SearchModel()
+        model.results = [SearchHit(path: "/tmp/first"), SearchHit(path: "/tmp/second"), SearchHit(path: "/tmp/third")]
+        model.selection = model.results[1].id
+        func offset(keyCode: UInt16, flags: NSEvent.ModifierFlags = [], repeatKey: Bool = false) throws -> Int? {
+            let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags,
+                timestamp: 0, windowNumber: 0, context: nil, characters: "", charactersIgnoringModifiers: "",
+                isARepeat: repeatKey, keyCode: keyCode))
+            return ResultListPreviewShortcut.Observer.previewNavigationOffset(event)
+        }
+        model.moveSelection(by: try XCTUnwrap(offset(keyCode: 125)))
+        XCTAssertEqual(model.selectedHit?.url, URL(fileURLWithPath: "/tmp/third"))
+        model.moveSelection(by: try XCTUnwrap(offset(keyCode: 125, repeatKey: true)))
+        XCTAssertEqual(model.selection, "/tmp/third")
+        model.moveSelection(by: try XCTUnwrap(offset(keyCode: 126)))
+        XCTAssertEqual(model.selection, "/tmp/second")
+        model.moveSelection(by: -1)
+        model.moveSelection(by: -1)
+        XCTAssertEqual(model.selection, "/tmp/first")
+        for key: UInt16 in [49, 123, 124, 53, 36] {
+            XCTAssertNil(try offset(keyCode: key))
+        }
+        for modifier: NSEvent.ModifierFlags in [.command, .control, .option, .shift] {
+            XCTAssertNil(try offset(keyCode: 125, flags: modifier))
+            XCTAssertNil(try offset(keyCode: 126, flags: modifier))
+        }
+        model.selection = nil
+        model.moveSelection(by: 1)
+        XCTAssertNil(model.selection)
+        model.results = []
+        model.moveSelection(by: -1)
+        XCTAssertNil(model.selection)
+    }
+
+    @MainActor
     func testSpacePreviewRequiresUnmodifiedSpaceAndListFocus() throws {
         _ = NSApplication.shared
         func event(keyCode: UInt16 = 49, flags: NSEvent.ModifierFlags = []) throws -> NSEvent {

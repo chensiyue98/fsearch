@@ -1,5 +1,6 @@
 import AppKit
 import QuickLook
+import QuickLookUI
 import SwiftUI
 
 struct SearchView: View {
@@ -205,7 +206,8 @@ struct SearchView: View {
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)
                 .background {
-                    ResultListPreviewShortcut {
+                    ResultListPreviewShortcut(previewURL: previewURL, moveSelection: model.moveSelection,
+                                              focusResults: { searchFocused = false }) {
                         guard let hit = model.selectedHit else { return false }
                         previewURL = previewURL == nil ? hit.url : nil
                         return true
@@ -427,16 +429,33 @@ private struct ResultRow: View {
 
 /// Bridges list key handling on macOS 13 without installing an app-wide shortcut.
 struct ResultListPreviewShortcut: NSViewRepresentable {
+    var previewURL: URL?
+    var moveSelection: (Int) -> Void
+    var focusResults: () -> Void
     var preview: () -> Bool
 
-    func makeNSView(context: Context) -> Observer { Observer(preview: preview) }
-    func updateNSView(_ view: Observer, context: Context) { view.preview = preview }
+    func makeNSView(context: Context) -> Observer {
+        Observer(previewURL: previewURL, moveSelection: moveSelection, focusResults: focusResults, preview: preview)
+    }
+    func updateNSView(_ view: Observer, context: Context) {
+        view.previewURL = previewURL
+        view.moveSelection = moveSelection
+        view.focusResults = focusResults
+        view.preview = preview
+    }
 
     final class Observer: NSView {
+        var previewURL: URL?
+        var moveSelection: (Int) -> Void
+        var focusResults: () -> Void
         var preview: () -> Bool
         private var monitor: Any?
 
-        init(preview: @escaping () -> Bool) {
+        init(previewURL: URL?, moveSelection: @escaping (Int) -> Void,
+             focusResults: @escaping () -> Void, preview: @escaping () -> Bool) {
+            self.previewURL = previewURL
+            self.moveSelection = moveSelection
+            self.focusResults = focusResults
             self.preview = preview
             super.init(frame: .zero)
         }
@@ -447,12 +466,60 @@ struct ResultListPreviewShortcut: NSViewRepresentable {
             super.viewDidMoveToWindow()
             if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
             guard window != nil else { return }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard let self, let window = self.window,
-                      event.window === window, window.isKeyWindow,
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { [weak self] event in
+                guard let self, let window = self.window else { return event }
+                if event.type == .leftMouseDown {
+                    self.focusListForClick(event)
+                    return event
+                }
+                // Quick Look becomes the key window, so list key handling no longer runs.
+                // Scope navigation to the preview opened by this search window.
+                if self.previewURL != nil, NSApp.mainWindow === window,
+                   let panel = event.window as? QLPreviewPanel, panel.isKeyWindow,
+                   panel.isVisible, let offset = Self.previewNavigationOffset(event) {
+                    self.moveSelection(offset)
+                    return nil
+                }
+                guard event.window === window, window.isKeyWindow,
                       Self.shouldPreview(event, responder: window.firstResponder) else { return event }
                 if event.isARepeat { return nil }
                 return self.preview() ? nil : event
+            }
+        }
+
+        func focusListForClick(_ event: NSEvent) {
+            guard event.type == .leftMouseDown, let window, event.window === window,
+                  bounds.contains(convert(event.locationInWindow, from: nil)),
+                  let contentView = window.contentView,
+                  let hit = contentView.hitTest(contentView.convert(event.locationInWindow, from: nil)),
+                  let table = Self.resultTable(containing: hit) else { return }
+            // SwiftUI row selection doesn't always end the search field's editing session.
+            // Transfer real keyboard focus without intercepting native selection/double-clicks.
+            focusResults()
+            window.makeFirstResponder(table)
+        }
+
+        private static func resultTable(containing view: NSView) -> NSTableView? {
+            var ancestor: NSView? = view
+            while let current = ancestor {
+                if let table = current as? NSTableView { return table }
+                if let label = current as? NSTextField, !label.isEditable, !label.isSelectable {
+                    ancestor = current.superview
+                    continue
+                }
+                if current is NSTextView || current is NSControl { return nil }
+                ancestor = current.superview
+            }
+            return nil
+        }
+
+        static func previewNavigationOffset(_ event: NSEvent) -> Int? {
+            guard event.type == .keyDown,
+                  event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty else { return nil }
+            switch event.keyCode {
+            case 126: return -1
+            case 125: return 1
+            default: return nil
             }
         }
 
