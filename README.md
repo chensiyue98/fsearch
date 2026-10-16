@@ -16,6 +16,113 @@ Or skip the Rust toolchain with a release build for Apple Silicon:
 curl -L https://github.com/noahdunnagan/fsearch/releases/latest/download/fsearch-aarch64-apple-darwin.tar.gz | tar xz && ./fsearch install
 ```
 
+## Native macOS app
+
+A lightweight SwiftUI interface is available in `macos/` (macOS 13+, Xcode
+15+ or the Swift 5.9+ toolchain). The app bundles its own Rust engine and
+communicates directly with an app-owned `fsearch embedded-gui` process over
+stdin/stdout. No separate service, socket, CLI installation, or Swift dependency
+is needed.
+
+```sh
+./scripts/build-macos-app.sh
+open dist/FSearch.app
+```
+
+The script builds the Rust engine from the current source, bundles it at
+`FSearch.app/Contents/MacOS/fsearch`, and applies local ad-hoc signatures.
+Opening the app automatically starts its bundled engine. Closing the search
+window leaves FSearch running in the background. Quitting FSearch stops the
+engine; it also exits when the app's input pipe closes. The saved index is
+retained, and reopening the app replays filesystem changes. The built-in engine
+always takes precedence over executable paths saved by older versions.
+
+The app creates no service socket or service lock. Standalone CLI/MCP clients
+can keep their independent `fsearch.sock` daemon. Both reuse the same on-disk
+index, with one writer enforced by the existing index lock; the app works
+without a CLI daemon and does not stop an independently started one.
+To bundle an existing engine instead:
+
+```sh
+FSEARCH_BINARY="$HOME/.local/bin/fsearch" ./scripts/build-macos-app.sh
+```
+
+The `--gui-only` script option is only for UI development; a distributable
+app must be built with its engine.
+
+For development, build the engine with `cargo build --release`, then run
+`swift run --package-path macos FSearchGUI` from the repository root. You
+can also open `macos/FSearch.xcodeproj` in Xcode, select the **FSearch**
+scheme and **My Mac**, and press **⌘R**. The application target compiles and
+embeds the Rust engine automatically; **⌘U** runs the Swift tests. Debug and
+Release configurations use local ad-hoc signing, so no development team is
+required. The default architecture is the build Mac's architecture.
+
+The Xcode build phase finds Cargo in `~/.cargo/bin` or Homebrew locations.
+If Cargo is unavailable, it automatically bundles this checkout's existing
+`target/release/fsearch`, with a warning that Rust source changes are not
+being rebuilt. Install a Rust toolchain to rebuild the engine, or add a
+user-defined `FSEARCH_BINARY` build setting with the absolute path to another
+existing engine. The engine must
+support `embedded-gui` and match the app's architecture. Xcode
+does not install a Rust toolchain or change your shell configuration.
+
+For command-line Xcode builds:
+
+```sh
+xcodebuild -project macos/FSearch.xcodeproj -scheme FSearch -configuration Debug build
+xcodebuild -project macos/FSearch.xcodeproj -scheme FSearch -destination 'platform=macOS' test
+```
+
+`macos/Package.swift` remains available for Swift Package Manager. Run the Swift protocol and
+connection tests with `swift test --package-path macos`. The actual Rust
+engine and service lifecycles are covered by `cargo test --test gui_lifecycle`.
+
+- Search as you type, switch between fuzzy file names and literal contents,
+  choose a folder, and load additional results.
+- Preset dropdowns narrow results by kind, modification time, and size.
+  Combine them with names or literal content searches, or browse matching
+  files with no keywords. Filters starts collapsed; expand it to also sort
+  by relevance, name (A–Z/Z–A), modified time (newest/oldest), or size
+  (largest/smallest). Metadata sorting happens before pagination, including
+  content matches and recent items. Reset keeps the search text and folder.
+  Content searches with metadata ordering scan files in that order and may
+  be slower than the default indexed relevance search.
+- File names accepts the full query syntax below, including `grep:` and
+  `regex:`. Contents treats the entire input as literal text, with smart case.
+- Inspect file metadata or matching lines, double-click or press Return to
+  open, reveal in Finder with ⌘R, and focus search with ⌘F.
+- An empty search shows files opened through FSearch and other engine recents.
+  Turn off **Show recently opened** in Settings to leave empty searches blank;
+  the preference persists and does not affect keyword searches.
+- Settings (⌘,) shows the live indexing stage, file and text counts, index
+  sizes, pending text files, and Full Disk Access status. It refreshes every
+  two seconds while visible and pauses polling when closed or minimized.
+- The menu bar icon offers Show FSearch, Settings, and Quit. Settings lets
+  you independently hide the Dock and menu bar icons; these choices persist.
+  Reopening the app in Finder brings back the search window even with both
+  icons hidden.
+- Press ⌃⌥Space anywhere to toggle the search window: hide it when visible,
+  or restore it and focus search when hidden or minimized. All entry points
+  reuse the same search window; multiple windows and tabs are disabled.
+  Press Escape in the search window to hide it while FSearch keeps running. In
+  Settings, click the shortcut and press a new combination with Command,
+  Control, or Option; Escape cancels and Reset restores the default. Changes
+  persist, and unavailable shortcuts show an error while preserving the
+  previous shortcut. Global shortcuts do not require Accessibility access.
+- Settings confirms that the engine is included in the app. Development
+  runs outside an app bundle can use a local release build or CLI installation;
+  packaged apps always require and use their own bundled engine.
+
+First-run indexing happens in the background. If a query reports that the
+index is still building, try again shortly, or choose a folder to search
+that folder first. For protected folders, grant Full Disk Access to the
+engine executable (inside a bundled app: `FSearch.app/Contents/MacOS/fsearch`),
+as described below. The app is distributed outside the App Sandbox and
+uses the existing index and filesystem permission behavior. Distribution to
+other Macs requires Developer ID signing and notarization in addition to
+the local build script.
+
 ## Speed
 
 M4 Mac mini, a home holding the Linux or the Chromium source tree, vs the
@@ -88,6 +195,7 @@ JSON lines over `~/Library/Application Support/FSearch/fsearch.sock`, or
 {"q": "main.rs", "boost": true, "near": "~/Developer/app/src/lib.rs", "git": true}
 {"op": "open", "path": "~/Developer/app/src/main.rs"}
 {"op": "recent", "in": "~/Developer/app"}
+{"op": "status", "progress": true}
 ```
 
 `open` tells it what you opened; `"boost": true` ranks those higher for a

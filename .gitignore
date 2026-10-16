@@ -2,3 +2,9 @@ target/
 .probe/
 .livetest/
 .replaytest/
+macos/.build/
+macos/.swiftpm/
+dist/
+**/xcuserdata/
+*.xcuserstate
+macos/build/

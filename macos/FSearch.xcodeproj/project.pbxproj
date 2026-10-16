@@ -1,0 +1,392 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C2F5E628D782128B3B4A6CE /* FSearchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2551265114C1BC3EF59E9C06 /* FSearchApp.swift */; };
+		14330A02AB0DACE672CC6B7D /* SearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FE3899A4C890F7FD89F9956 /* SearchModel.swift */; };
+		41E1C6234BECB7D99029D6E1 /* SearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899BFF49B18AA2CD6097A1F6 /* SearchTests.swift */; };
+		8148C04239DDD36D5969100B /* SearchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4826DFBC1BE8DFC0B20B13 /* SearchProtocol.swift */; };
+		886E75760EA46F451C41617B /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A003E21276D99A7009BC1110 /* SearchView.swift */; };
+		8EB9ED807002B1BBAB218623 /* IndexStatusSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF177CB6904A9A9CB8A7929 /* IndexStatusSection.swift */; };
+		BA1419EDF0EF6B5345291445 /* SearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72EDA43E21DE7AAAE4E187EE /* SearchClient.swift */; };
+		C8306F039923534CC3AB7E23 /* AppLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD22E24B56568913438C977D /* AppLifecycle.swift */; };
+		FA0000000000000000000001 /* GlobalShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000000000000000000002 /* GlobalShortcut.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7E85D4A68785761E1DBB22D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F75109BEB4DD8800DA6B45F8;
+			remoteInfo = FSearchGUI;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0651D93765F7DC1065DEC3A3 /* FSearch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FSearch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0EE8164E65968E18BAA7E2CB /* Cargo.toml */ = {isa = PBXFileReference; lastKnownFileType = text; name = Cargo.toml; path = ../Cargo.toml; sourceTree = "<group>"; };
+		1507F021100E808DBE2FAA00 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		17E5298C1B590BDFEFF5FE60 /* FSearchGUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FSearchGUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DF177CB6904A9A9CB8A7929 /* IndexStatusSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexStatusSection.swift; sourceTree = "<group>"; };
+		1FE3899A4C890F7FD89F9956 /* SearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchModel.swift; sourceTree = "<group>"; };
+		2551265114C1BC3EF59E9C06 /* FSearchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSearchApp.swift; sourceTree = "<group>"; };
+		72638434B198B71E5CD8C0C5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
+		72EDA43E21DE7AAAE4E187EE /* SearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchClient.swift; sourceTree = "<group>"; };
+		899BFF49B18AA2CD6097A1F6 /* SearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTests.swift; sourceTree = "<group>"; };
+		A003E21276D99A7009BC1110 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		BD22E24B56568913438C977D /* AppLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLifecycle.swift; sourceTree = "<group>"; };
+		BE4826DFBC1BE8DFC0B20B13 /* SearchProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchProtocol.swift; sourceTree = "<group>"; };
+		E8ACAADED5B50E92CE462346 /* xcode-build-engine.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = "xcode-build-engine.sh"; path = "../scripts/xcode-build-engine.sh"; sourceTree = "<group>"; };
+		FA0000000000000000000002 /* GlobalShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcut.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		156998F1D551F8233F560236 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BD92572B49AC16A86614498D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		615B463D1028E4E24B674CF7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0651D93765F7DC1065DEC3A3 /* FSearch.app */,
+				17E5298C1B590BDFEFF5FE60 /* FSearchGUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8309DD304D804F9D7F6302F5 /* Sources/FSearchGUI */ = {
+			isa = PBXGroup;
+			children = (
+				BD22E24B56568913438C977D /* AppLifecycle.swift */,
+				FA0000000000000000000002 /* GlobalShortcut.swift */,
+				2551265114C1BC3EF59E9C06 /* FSearchApp.swift */,
+				1DF177CB6904A9A9CB8A7929 /* IndexStatusSection.swift */,
+				72EDA43E21DE7AAAE4E187EE /* SearchClient.swift */,
+				1FE3899A4C890F7FD89F9956 /* SearchModel.swift */,
+				BE4826DFBC1BE8DFC0B20B13 /* SearchProtocol.swift */,
+				A003E21276D99A7009BC1110 /* SearchView.swift */,
+			);
+			path = Sources/FSearchGUI;
+			sourceTree = "<group>";
+		};
+		870B3294C0CBD48AF6BBCC1B = {
+			isa = PBXGroup;
+			children = (
+				8309DD304D804F9D7F6302F5 /* Sources/FSearchGUI */,
+				A619C04D8A87AB070162A099 /* Tests/FSearchGUITests */,
+				1507F021100E808DBE2FAA00 /* Info.plist */,
+				0EE8164E65968E18BAA7E2CB /* Cargo.toml */,
+				72638434B198B71E5CD8C0C5 /* README.md */,
+				E8ACAADED5B50E92CE462346 /* xcode-build-engine.sh */,
+				615B463D1028E4E24B674CF7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A619C04D8A87AB070162A099 /* Tests/FSearchGUITests */ = {
+			isa = PBXGroup;
+			children = (
+				899BFF49B18AA2CD6097A1F6 /* SearchTests.swift */,
+			);
+			path = Tests/FSearchGUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B2BFE0D3C68337315431B2F3 /* FSearchGUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52AD4600EC3994E0CD3216B8 /* Build configuration list for PBXNativeTarget "FSearchGUITests" */;
+			buildPhases = (
+				73449B7401E2150CE31884A3 /* Sources */,
+				156998F1D551F8233F560236 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BAE932EF166B50AB877FDC6F /* PBXTargetDependency */,
+			);
+			name = FSearchGUITests;
+			productName = FSearchGUITests;
+			productReference = 17E5298C1B590BDFEFF5FE60 /* FSearchGUITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F75109BEB4DD8800DA6B45F8 /* FSearchGUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4867F1BF372A84237FA0A5A7 /* Build configuration list for PBXNativeTarget "FSearchGUI" */;
+			buildPhases = (
+				949D493B91791558E87BC5D7 /* Sources */,
+				BD92572B49AC16A86614498D /* Frameworks */,
+				0B8377DDC3BC9F3DDB77262E /* Build and Embed Rust Engine */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FSearchGUI;
+			productName = FSearch;
+			productReference = 0651D93765F7DC1065DEC3A3 /* FSearch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					B2BFE0D3C68337315431B2F3 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = F75109BEB4DD8800DA6B45F8;
+					};
+					F75109BEB4DD8800DA6B45F8 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 640DC9EFD529235A8D9E2727 /* Build configuration list for PBXProject "FSearch" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 870B3294C0CBD48AF6BBCC1B;
+			productRefGroup = 615B463D1028E4E24B674CF7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F75109BEB4DD8800DA6B45F8 /* FSearchGUI */,
+				B2BFE0D3C68337315431B2F3 /* FSearchGUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0B8377DDC3BC9F3DDB77262E /* Build and Embed Rust Engine */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../scripts/xcode-build-engine.sh",
+				"$(SRCROOT)/../Cargo.toml",
+				"$(SRCROOT)/../Cargo.lock",
+			);
+			name = "Build and Embed Rust Engine";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/MacOS/fsearch",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/xcode-build-engine.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		73449B7401E2150CE31884A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41E1C6234BECB7D99029D6E1 /* SearchTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		949D493B91791558E87BC5D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C8306F039923534CC3AB7E23 /* AppLifecycle.swift in Sources */,
+				FA0000000000000000000001 /* GlobalShortcut.swift in Sources */,
+				0C2F5E628D782128B3B4A6CE /* FSearchApp.swift in Sources */,
+				8EB9ED807002B1BBAB218623 /* IndexStatusSection.swift in Sources */,
+				BA1419EDF0EF6B5345291445 /* SearchClient.swift in Sources */,
+				14330A02AB0DACE672CC6B7D /* SearchModel.swift in Sources */,
+				8148C04239DDD36D5969100B /* SearchProtocol.swift in Sources */,
+				886E75760EA46F451C41617B /* SearchView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BAE932EF166B50AB877FDC6F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F75109BEB4DD8800DA6B45F8 /* FSearchGUI */;
+			targetProxy = 7E85D4A68785761E1DBB22D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00F209874A1F7309F6DCEAA7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		04B042A5E7A3FDC0670ED689 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.fsearch.mac.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FSearch.app/Contents/MacOS/FSearchGUI";
+			};
+			name = Release;
+		};
+		DF53765BF9D03B65CB04A4C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.fsearch.mac.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FSearch.app/Contents/MacOS/FSearchGUI";
+			};
+			name = Debug;
+		};
+		ED8772ADEC3A6C25161BC957 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F72D4F08E84CA4C7F809A7CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 4SGGP72YQZ;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				EXECUTABLE_NAME = FSearchGUI;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.fsearch.mac;
+				PRODUCT_MODULE_NAME = FSearchGUI;
+				PRODUCT_NAME = FSearch;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = Release;
+		};
+		F8975E934DA2067E0E497395 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 4SGGP72YQZ;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				EXECUTABLE_NAME = FSearchGUI;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.fsearch.mac;
+				PRODUCT_MODULE_NAME = FSearchGUI;
+				PRODUCT_NAME = FSearch;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4867F1BF372A84237FA0A5A7 /* Build configuration list for PBXNativeTarget "FSearchGUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8975E934DA2067E0E497395 /* Debug */,
+				F72D4F08E84CA4C7F809A7CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52AD4600EC3994E0CD3216B8 /* Build configuration list for PBXNativeTarget "FSearchGUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF53765BF9D03B65CB04A4C8 /* Debug */,
+				04B042A5E7A3FDC0670ED689 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		640DC9EFD529235A8D9E2727 /* Build configuration list for PBXProject "FSearch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED8772ADEC3A6C25161BC957 /* Debug */,
+				00F209874A1F7309F6DCEAA7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}

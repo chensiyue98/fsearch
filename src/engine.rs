@@ -55,8 +55,10 @@ pub struct Found {
 
 #[derive(serde::Serialize)]
 pub struct Status {
-    #[serde(skip)]
     pub ready: bool,
+    pub replaying: bool,
+    pub content_ready: bool,
+    pub listed: usize,
     pub entries: usize,
     pub dirs: usize,
     pub overlay: usize,
@@ -430,6 +432,9 @@ impl Engine {
         let c = self.s.content.read().unwrap();
         Status {
             ready: l.is_some(),
+            replaying: self.s.replaying.load(Ordering::Relaxed),
+            content_ready: self.s.content_ready.load(Ordering::Acquire),
+            listed: walk::LISTED.load(Ordering::Relaxed),
             entries: l.as_ref().map_or(0, |l| l.base.n),
             dirs: l.as_ref().map_or(0, |l| l.base.d),
             overlay: l.as_ref().map_or(0, |l| l.over.len()),

@@ -18,6 +18,10 @@ const USAGE: &str = "usage:
   fsearch stdio                 JSON lines on stdin/stdout
   fsearch mcp                   MCP server on stdin/stdout, for coding agents
   fsearch serve                 run the daemon in the foreground
+  fsearch serve-gui             GUI-owned service; exits when stdin closes
+  fsearch stdio-gui             connect to the GUI service (never starts a daemon)
+  fsearch embedded-gui          app-owned engine over stdin/stdout (no daemon or socket)
+  fsearch stop                  stop the standalone CLI/MCP daemon
   fsearch status
   fsearch install [--login]      copy to ~/.local/bin; --login also starts the daemon at login
                                 (needs Full Disk Access granted to ~/.local/bin/fsearch)
@@ -52,6 +56,16 @@ fn main() {
             space_efficient();
             server::serve(data_dir(), home())
         }
+        Some("serve-gui") => {
+            space_efficient();
+            server::serve_gui(data_dir(), home())
+        }
+        Some("stdio-gui") => stdio_with(true),
+        Some("embedded-gui") => {
+            space_efficient();
+            server::embedded_gui(data_dir(), home()).unwrap_or_else(|e| die(&e))
+        }
+        Some("stop") => server::stop(&data_dir()).unwrap_or_else(|e| die(&e)),
         Some("stdio") => stdio(),
         Some("mcp") => mcp::run(data_dir()),
         Some("status") => print_one(&serde_json::json!({"op": "status"}), true),
@@ -112,7 +126,12 @@ fn print_one(req: &serde_json::Value, raw: bool) {
 }
 
 fn stdio() {
-    let s = server::connect(&data_dir()).unwrap_or_else(|e| die(&format!("cannot reach daemon: {e}")));
+    stdio_with(false)
+}
+
+fn stdio_with(gui: bool) {
+    let s = (if gui { server::connect_gui(&data_dir()) } else { server::connect(&data_dir()) })
+        .unwrap_or_else(|e| die(&format!("cannot reach daemon: {e}")));
     let mut up = s.try_clone().unwrap();
     std::thread::spawn(move || {
         for line in std::io::stdin().lock().lines() {

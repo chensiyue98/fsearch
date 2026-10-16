@@ -7,7 +7,7 @@ use fsearch::walk::{KIND_DIR, KIND_FILE, KIND_LINK, KIND_OTHER};
 use fsearch::{Engine, Found, GrepMode, Options, Query};
 use regex::bytes::Regex;
 use serde_json::{Value, json};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
@@ -19,11 +19,57 @@ pub fn socket_path(dir: &Path) -> PathBuf {
 }
 
 pub fn serve(dir: PathBuf, home: String) {
+    serve_at(dir, home, false)
+}
+
+/// The bundled app talks directly to its own engine. There is no listener,
+/// socket lock, bridge, or dependency on a separately running service.
+pub fn embedded_gui(dir: PathBuf, home: String) -> Result<(), String> {
+    git::kill_on_term();
+    let git = Git::new(&home);
+    let engine = Engine::start(Options { dir: dir.clone(), home, skip: None })?;
+    let g = git.clone();
+    engine.on_change(move |dirs| g.changed(dirs));
+    let cx = Ctx { engine, git, frecency: Frecency::load(dir.join("frecency")) };
+    unsafe { libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0) };
+    let mut out = std::io::stdout().lock();
+    let mut reply = Vec::new();
+    for line in std::io::stdin().lock().lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        if line.trim().is_empty() { continue; }
+        reply.clear();
+        respond(&line, &cx, &mut reply);
+        if out.write_all(&reply).and_then(|_| out.flush()).is_err() { break; }
+        cx.engine.keep_warm(WARM);
+    }
+    Ok(())
+}
+
+/// Separate socket, but the same persistent index. The GUI alone owns
+/// stdin: EOF also stops the service if the GUI crashes or is force quit.
+pub fn serve_gui(dir: PathBuf, home: String) {
+    git::kill_on_term();
+    std::thread::spawn(|| {
+        let mut byte = [0];
+        loop {
+            match std::io::stdin().read(&mut byte) {
+                Ok(0) => break,
+                Ok(_) => {},
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(_) => break,
+            }
+        }
+        unsafe { libc::raise(libc::SIGTERM); }
+    });
+    serve_at(dir, home, true)
+}
+
+fn serve_at(dir: PathBuf, home: String, gui: bool) {
     // One daemon per socket. (The engine's own lock decides who writes the
     // index: an app embedding fsearch may own it while the daemon follows.)
     std::fs::create_dir_all(&dir).ok();
     // Opened without truncating: a loser must not wipe the owner's pid.
-    let Ok(mut lock) = std::fs::OpenOptions::new().write(true).create(true).truncate(false).open(dir.join("socket.lock")) else { return };
+    let Ok(mut lock) = std::fs::OpenOptions::new().write(true).create(true).truncate(false).open(dir.join(if gui { "gui.lock" } else { "socket.lock" })) else { return };
     if !try_lock(&lock) {
         eprintln!("{} another fsearch daemon is running", fsearch::query::now_secs());
         return;
@@ -42,7 +88,7 @@ pub fn serve(dir: PathBuf, home: String) {
     let g = git.clone();
     engine.on_change(move |dirs| g.changed(dirs));
     let cx = Arc::new(Ctx { engine, git, frecency: Frecency::load(dir.join("frecency")) });
-    let sock = socket_path(&dir);
+    let sock = if gui { dir.join("gui.sock") } else { socket_path(&dir) };
     let _ = std::fs::remove_file(&sock);
     let listener = match UnixListener::bind(&sock) {
         Ok(l) => l,
@@ -51,10 +97,20 @@ pub fn serve(dir: PathBuf, home: String) {
             return;
         }
     };
+    if gui {
+        // The app waits for this before launching a connect-only bridge.
+        println!("ready");
+        let _ = std::io::stdout().flush();
+    }
     for conn in listener.incoming().flatten() {
         let cx = cx.clone();
         std::thread::spawn(move || handle(conn, &cx));
     }
+}
+
+/// Unlike `connect`, this must never leave an independently running daemon.
+pub fn connect_gui(dir: &Path) -> std::io::Result<UnixStream> {
+    UnixStream::connect(dir.join("gui.sock"))
 }
 
 /// What requests reach: the engine, the git status of what it finds, and
@@ -241,7 +297,7 @@ fn run(v: &Value, cx: &Ctx) -> Result<Reply, String> {
         }
         "status" => {
             let s = engine.status();
-            if !s.ready {
+            if !s.ready && v.get("progress") != Some(&Value::Bool(true)) {
                 return Err(engine.indexing());
             }
             let mut v = serde_json::to_value(s).map_err(|e| e.to_string())?;
