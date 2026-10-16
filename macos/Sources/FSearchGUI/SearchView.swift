@@ -12,8 +12,8 @@ struct SearchView: View {
             searchBar
             Divider()
             HSplitView {
-                resultsPane.frame(minWidth: 420)
-                detailPane.frame(minWidth: 260, idealWidth: 320, maxWidth: 400)
+                resultsPane.frame(minWidth: 400, maxWidth: .infinity)
+                detailPane.frame(minWidth: 260, idealWidth: 290, maxWidth: 320)
             }
             Divider()
             statusBar
@@ -46,63 +46,97 @@ struct SearchView: View {
     }
 
     private var searchBar: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(spacing: 8) {
             HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.secondary)
-                TextField(model.mode == .names ? "Find files, folders, or use ext:rs…" : "Search text inside files…", text: $model.query)
-                    .textFieldStyle(.plain).font(.title3)
-                    .focused($searchFocused)
-                    .onSubmit { if let hit = model.selectedHit { model.open(hit) } }
-                    .accessibilityLabel("Search query")
-                if !model.query.isEmpty {
-                    Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain).foregroundStyle(.secondary).help("Clear search")
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(searchFocused ? Color.accentColor : Color.secondary)
+                    TextField(model.mode == .names ? "Search files and folders…" : "Search text inside files…", text: $model.query)
+                        .textFieldStyle(.plain).font(.system(size: 13))
+                        .focused($searchFocused)
+                        .onSubmit { if let hit = model.selectedHit { model.open(hit) } }
+                        .accessibilityLabel("Search query")
+                    if !model.query.isEmpty {
+                        Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).foregroundStyle(.secondary).help("Clear search")
+                    } else {
+                        Text("⌘F").font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary).accessibilityHidden(true)
+                    }
+                }
+                .padding(.horizontal, 10).frame(height: 30)
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 7))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7)
+                        .strokeBorder(searchFocused ? Color.accentColor.opacity(0.55) : Color.primary.opacity(0.1), lineWidth: 1)
                 }
                 Picker("Search mode", selection: $model.mode) {
                     ForEach(SearchMode.allCases) { Text($0.rawValue).tag($0) }
                 }
-                .pickerStyle(.segmented).labelsHidden().frame(width: 210)
+                .pickerStyle(.segmented).controlSize(.small).labelsHidden().frame(width: 174)
             }
-            DisclosureGroup(isExpanded: $showFilters) {
-                HStack(spacing: 12) {
-                    Picker("Kind", selection: $model.filters.kind) {
-                        ForEach(SearchFilters.Kind.allCases) { Text($0.rawValue).tag($0) }
+            HStack(spacing: 10) {
+                Button { model.chooseFolder() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: model.scope == nil ? "internaldrive" : "folder")
+                        Text(model.scope.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "Everywhere")
+                            .lineLimit(1).truncationMode(.middle)
+                        Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
                     }
-                    Picker("Modified", selection: $model.filters.modified) {
-                        ForEach(SearchFilters.Modified.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    Picker("Size", selection: $model.filters.size) {
-                        ForEach(SearchFilters.Size.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    if model.filters.isActive {
-                        Button("Clear filters") { model.filters = SearchFilters() }
-                            .help("Reset preset filters and keep the search text")
-                    }
-                    Spacer(minLength: 0)
                 }
-                .pickerStyle(.menu)
-                .fixedSize(horizontal: true, vertical: false)
-                .controlSize(.small)
-                .padding(.top, 8)
-            } label: {
-                Label(activeFilterCount == 0 ? "Filters" : "Filters (\(activeFilterCount))", systemImage: "line.3.horizontal.decrease.circle")
-                    .font(.caption)
-                    .foregroundStyle(activeFilterCount > 0 ? Color.accentColor : Color.secondary)
-            }
-            HStack(spacing: 6) {
-                Image(systemName: model.scope == nil ? "internaldrive" : "folder")
-                Text(model.scope.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "Everywhere")
-                    .lineLimit(1).truncationMode(.middle)
+                .buttonStyle(.plain).help(model.scope ?? "Choose a search folder")
                 if model.scope != nil {
-                    Button { model.scope = nil } label: { Image(systemName: "xmark") }
+                    Button { model.scope = nil } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain).help("Search everywhere")
                 }
-                Spacer()
-                Text(model.queryIsEmpty ? (model.filters.isActive ? "Filtered files" : model.showRecentlyOpened ? "Recently opened" : "") : model.mode == .names ? "Fuzzy matching · Query filters supported" : "Literal text · Smart case")
+                Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 1, height: 12)
+                Button { showFilters.toggle() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "line.3.horizontal.decrease")
+                        Text(activeFilterCount == 0 ? "Filters" : "Filters · \(activeFilterCount)")
+                        Image(systemName: showFilters ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                    }
+                    .foregroundStyle(showFilters || activeFilterCount > 0 ? Color.accentColor : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(showFilters ? "Expanded" : "Collapsed")
+                Spacer(minLength: 8)
+                Text(model.mode == .names ? "Try ext:pdf or mtime:<7d" : "Literal text · Smart case")
+                    .foregroundStyle(.tertiary).lineLimit(1)
             }
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.system(size: 11)).foregroundStyle(.secondary)
+            .padding(.horizontal, 2)
+            if showFilters {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { filterPickers }
+                    VStack(alignment: .leading, spacing: 8) { filterPickers }
+                }
+                .pickerStyle(.menu).controlSize(.small)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+            }
         }
-        .padding(20)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
+    }
+
+    @ViewBuilder
+    private var filterPickers: some View {
+        Picker("Kind", selection: $model.filters.kind) {
+            ForEach(SearchFilters.Kind.allCases) { Text($0.rawValue).tag($0) }
+        }
+        Picker("Modified", selection: $model.filters.modified) {
+            ForEach(SearchFilters.Modified.allCases) { Text($0.rawValue).tag($0) }
+        }
+        Picker("Size", selection: $model.filters.size) {
+            ForEach(SearchFilters.Size.allCases) { Text($0.rawValue).tag($0) }
+        }
+        if model.filters.isActive {
+            Button("Clear filters") { model.filters = SearchFilters() }
+                .help("Reset preset filters and keep the search text")
+        }
     }
 
     private var activeFilterCount: Int {
@@ -112,6 +146,18 @@ struct SearchView: View {
 
     private var resultsPane: some View {
         VStack(spacing: 0) {
+            HStack(spacing: 7) {
+                Image(systemName: model.hasSearchCriteria ? "list.bullet" : "clock")
+                Text(model.hasSearchCriteria ? "Search results" : model.showRecentlyOpened ? "Recently opened" : "Files")
+                Spacer()
+                if !model.results.isEmpty {
+                    Text(model.results.count.formatted()).monospacedDigit()
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Color.primary.opacity(0.05), in: Capsule())
+                }
+            }
+            .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            .padding(.horizontal, 20).frame(height: 36)
             if let error = model.error {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Search unavailable", systemImage: "exclamationmark.triangle").font(.headline)
@@ -139,6 +185,7 @@ struct SearchView: View {
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
                 // Use the list's native double-click action. A row-level
                 // double-tap recognizer delays its single-click selection.
                 .contextMenu(forSelectionType: String.self) { ids in
@@ -158,34 +205,66 @@ struct SearchView: View {
                 }
             }
         }
+        .background(Color(nsColor: .textBackgroundColor))
     }
 
     private var detailPane: some View {
         ScrollView {
             if let hit = model.selectedHit {
-                VStack(alignment: .leading, spacing: 20) {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: hit.path))
-                        .resizable().scaledToFit().frame(width: 56, height: 56)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(hit.name).font(.title3.weight(.semibold)).textSelection(.enabled)
-                        Text(hit.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("FILE DETAILS")
+                        .font(.system(size: 10, weight: .semibold)).tracking(1)
+                        .foregroundStyle(.secondary)
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: hit.path))
+                            .resizable().scaledToFit().frame(width: 48, height: 48)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(hit.name).font(.system(size: 15, weight: .semibold))
+                                .lineLimit(2).truncationMode(.middle).textSelection(.enabled)
+                                .help(hit.name)
+                            Text(hit.kind == "dir" ? "Folder" : hit.url.pathExtension.isEmpty ? "File" : "\(hit.url.pathExtension.uppercased()) file")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
-                    HStack {
-                        Button("Open") { model.open(hit) }.buttonStyle(.borderedProminent)
-                        Button { model.reveal(hit) } label: { Image(systemName: "folder") }.help("Reveal in Finder")
-                        Button { model.copyPath(hit) } label: { Image(systemName: "doc.on.doc") }.help("Copy path")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 8) {
+                        Button { model.open(hit) } label: {
+                            HStack {
+                                Text("Open")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Button { model.reveal(hit) } label: { Image(systemName: "folder") }
+                            .help("Reveal in Finder (⌘R)").accessibilityLabel("Reveal in Finder")
+                        Button { model.copyPath(hit) } label: { Image(systemName: "doc.on.doc") }
+                            .help("Copy path").accessibilityLabel("Copy path")
                     }
+                    .controlSize(.regular)
                     Divider()
-                    if let kind = hit.kind { detail("Kind", value: kind == "dir" ? "Folder" : kind.capitalized) }
-                    if let size = hit.size, hit.kind != "dir" {
-                        detail("Size", value: ByteCountFormatter.string(fromByteCount: Int64(clamping: size), countStyle: .file))
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Location").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                        Text((hit.path as NSString).abbreviatingWithTildeInPath)
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .lineLimit(3).truncationMode(.middle).textSelection(.enabled)
+                            .help(hit.path)
                     }
-                    if let mtime = hit.mtime, mtime > 0 {
-                        detail("Modified", value: Date(timeIntervalSince1970: mtime).formatted(date: .abbreviated, time: .shortened))
+                    VStack(spacing: 14) {
+                        if let kind = hit.kind { detail("Kind", value: kind == "dir" ? "Folder" : kind.capitalized) }
+                        if let size = hit.size, hit.kind != "dir" {
+                            detail("Size", value: ByteCountFormatter.string(fromByteCount: Int64(clamping: size), countStyle: .file))
+                        }
+                        if let mtime = hit.mtime, mtime > 0 {
+                            detail("Modified", value: Date(timeIntervalSince1970: mtime).formatted(date: .abbreviated, time: .shortened))
+                        }
                     }
                     if let matches = hit.matches, !matches.isEmpty {
-                        Text("MATCHING LINES").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Divider()
+                        Text("MATCHING LINES").font(.system(size: 10, weight: .semibold))
+                            .tracking(1).foregroundStyle(.secondary)
                         ForEach(Array(matches.enumerated()), id: \.offset) { _, match in
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("Line \(match.line)").font(.caption).foregroundStyle(.secondary)
@@ -197,10 +276,15 @@ struct SearchView: View {
                         }
                     }
                 }
-                .padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text("Select a file to see details")
-                    .font(.callout).foregroundStyle(.secondary).padding(32)
+                VStack(spacing: 10) {
+                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 28, weight: .light))
+                    Text("Select a file").font(.system(size: 13, weight: .medium))
+                    Text("Preview its details here").font(.caption)
+                }
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity).padding(.top, 100)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -208,24 +292,44 @@ struct SearchView: View {
     }
 
     private func detail(_ name: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(name).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.callout)
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            Text(name).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Text(value).multilineTextAlignment(.trailing).textSelection(.enabled)
         }
+        .font(.system(size: 11))
     }
 
     private var statusBar: some View {
         HStack(spacing: 8) {
-            if model.isSearching { ProgressView().controlSize(.small) }
+            if model.isSearching { ProgressView().controlSize(.mini) }
             Text("\(model.results.count) results\(model.next == nil ? "" : " · more available")")
-            if let time = model.tookMicroseconds { Text(String(format: "· %.2f ms", time / 1000)) }
+                .monospacedDigit()
+            if let time = model.tookMicroseconds, model.hasSearchCriteria {
+                Text(String(format: "· %.2f ms", time / 1000)).monospacedDigit()
+            }
             if model.indexing { Text("· Content index updating") }
             else if model.incomplete { Text("· Partial results — continue with Load More") }
-            Spacer()
-            Text("↵ Open    ⌘R Reveal    ⌘F Search")
+            Spacer(minLength: 8)
+            HStack(spacing: 12) {
+                shortcutHint("↵", title: "Open")
+                shortcutHint("⌘R", title: "Reveal")
+                shortcutHint("⌘F", title: "Search")
+            }
+            .layoutPriority(1)
         }
-        .font(.caption).foregroundStyle(.secondary)
-        .padding(.horizontal, 16).padding(.vertical, 9)
+        .font(.system(size: 10)).foregroundStyle(.secondary)
+        .padding(.horizontal, 16).frame(height: 32)
+    }
+
+    private func shortcutHint(_ key: String, title: String) -> some View {
+        HStack(spacing: 4) {
+            Text(key).font(.system(size: 10, weight: .medium))
+                .padding(.horizontal, 4).padding(.vertical, 2)
+                .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 4))
+            Text(title)
+        }
+        .fixedSize()
     }
 
     private var queryHelp: some View {
@@ -244,12 +348,13 @@ struct SearchView: View {
 private struct ResultRow: View {
     let hit: SearchHit
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: hit.path))
-                .resizable().scaledToFit().frame(width: 28, height: 28).accessibilityHidden(true)
+                .resizable().scaledToFit().frame(width: 30, height: 30).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text(hit.name).font(.system(.body, weight: .medium)).lineLimit(1)
-                Text(hit.parent).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                Text(hit.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                    .truncationMode(.middle)
+                Text(hit.parent).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 if let first = hit.matches?.first {
                     Text("\(first.line): \(first.text.trimmingCharacters(in: .whitespacesAndNewlines))")
                         .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
@@ -258,7 +363,8 @@ private struct ResultRow: View {
             Spacer(minLength: 0)
             if hit.kind == "dir" { Image(systemName: "folder").foregroundStyle(.tertiary) }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 7)
+        .help(hit.path)
         .contentShape(Rectangle())
     }
 }

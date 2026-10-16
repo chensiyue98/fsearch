@@ -11,6 +11,7 @@ struct FSearchApp: App {
                 .frame(minWidth: 760, minHeight: 480)
         }
         .defaultSize(width: 1040, height: 680)
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Choose Search Folder…") { model.chooseFolder() }
