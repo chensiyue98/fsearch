@@ -10,6 +10,8 @@ struct SearchView: View {
     @State private var showFilters = false
     @State private var previewURL: URL?
     @State private var clearHistoryHovered = false
+    @State private var copiedPath: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("resultListStyle") private var resultListStyle = ResultListStyle.detailed
 
     var body: some View {
@@ -24,6 +26,7 @@ struct SearchView: View {
             statusBar
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .buttonStyle(FeedbackButtonStyle())
         .toolbar {
             ToolbarItemGroup {
                 Menu {
@@ -40,13 +43,21 @@ struct SearchView: View {
                 .accessibilityLabel("List style")
                 .accessibilityValue(resultListStyle.title)
                 Button { showHelp.toggle() } label: { Image(systemName: "questionmark.circle") }
+                    .buttonStyle(FeedbackButtonStyle(appearance: .subtle, isActive: showHelp, compact: true))
                     .help("Query syntax")
                     .popover(isPresented: $showHelp) { queryHelp }
             }
         }
         .quickLookPreview($previewURL)
         .onChange(of: model.selection) { _ in
+            copiedPath = nil
             if previewURL != nil { previewURL = model.selectedHit?.url }
+        }
+        .task(id: copiedPath) {
+            guard copiedPath != nil else { return }
+            do { try await Task.sleep(nanoseconds: 1_500_000_000) }
+            catch { return }
+            copiedPath = nil
         }
         .task { searchFocused = true; await model.start() }
         .onReceive(NotificationCenter.default.publisher(for: .focusFSearch)) { _ in searchFocused = true }
@@ -69,9 +80,16 @@ struct SearchView: View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(searchFocused ? Color.accentColor : Color.secondary)
+                    ZStack {
+                        if model.isSearching {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(searchFocused ? Color.accentColor : Color.secondary)
+                        }
+                    }
+                    .frame(width: 16, height: 16)
                     TextField(model.mode == .names ? "Search files and folders…" : "Search text inside files…", text: $model.query)
                         .textFieldStyle(.plain).font(.system(size: 13))
                         .focused($searchFocused)
@@ -79,7 +97,8 @@ struct SearchView: View {
                         .accessibilityLabel("Search query")
                     if !model.query.isEmpty {
                         Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.secondary).help("Clear search")
+                            .buttonStyle(FeedbackButtonStyle(appearance: .subtle, compact: true))
+                            .help("Clear search").accessibilityLabel("Clear search")
                     } else {
                         Text("⌘F").font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.tertiary).accessibilityHidden(true)
@@ -105,13 +124,17 @@ struct SearchView: View {
                         Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
                     }
                 }
-                .buttonStyle(.plain).help(model.scope ?? "Choose a search folder")
+                .buttonStyle(FeedbackButtonStyle(appearance: .subtle, compact: true))
+                .help(model.scope ?? "Choose a search folder")
                 if model.scope != nil {
                     Button { model.scope = nil } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain).help("Search everywhere")
+                        .buttonStyle(FeedbackButtonStyle(appearance: .subtle, compact: true))
+                        .help("Search everywhere").accessibilityLabel("Search everywhere")
                 }
                 Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 1, height: 12)
-                Button { showFilters.toggle() } label: {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { showFilters.toggle() }
+                } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "line.3.horizontal.decrease")
                         Text(activeFilterCount == 0 ? "Filters" : "Filters · \(activeFilterCount)")
@@ -120,7 +143,7 @@ struct SearchView: View {
                     }
                     .foregroundStyle(showFilters || activeFilterCount > 0 ? Color.accentColor : Color.secondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FeedbackButtonStyle(appearance: .subtle, isActive: showFilters, compact: true))
                 .accessibilityValue(showFilters ? "Expanded" : "Collapsed")
                 Spacer(minLength: 8)
                 Text(model.mode == .names ? "Try ext:pdf or mtime:<7d" : "Literal text · Smart case")
@@ -137,6 +160,7 @@ struct SearchView: View {
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                .transition(.opacity)
             }
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
@@ -211,8 +235,15 @@ struct SearchView: View {
             }
             if model.results.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: model.isSearching ? "hourglass" : "magnifyingglass")
-                        .font(.system(size: 36, weight: .light)).foregroundStyle(.tertiary)
+                    ZStack {
+                        if model.isSearching {
+                            ProgressView().controlSize(.large)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 36, weight: .light)).foregroundStyle(.tertiary)
+                        }
+                    }
+                    .frame(width: 40, height: 40)
                     Text(model.isSearching ? "Searching…" : model.hasSearchCriteria ? "No matching files" : "Find your next file")
                         .font(.headline)
                     Text(model.hasSearchCriteria ? "Try fewer words, adjust the filters, or choose a different folder." : model.showRecentlyOpened ? "Start typing to search your disk.\nFiles opened here appear in your recents." : "Start typing to search your disk.")
@@ -243,7 +274,7 @@ struct SearchView: View {
                         Button("Open") { model.open(hit) }
                         Button("Quick Look") { previewURL = hit.url }
                         Button("Reveal in Finder") { model.reveal(hit) }
-                        Button("Copy Path") { model.copyPath(hit) }
+                        Button("Copy Path") { copyPath(hit) }
                     }
                 } primaryAction: { ids in
                     if let hit = model.results.first(where: { ids.contains($0.id) }) {
@@ -251,7 +282,13 @@ struct SearchView: View {
                     }
                 }
                 if model.next != nil {
-                    Button("Load More Results") { model.search(loadMore: true) }
+                    Button { model.search(loadMore: true) } label: {
+                        HStack(spacing: 6) {
+                            if model.isSearching { ProgressView().controlSize(.mini) }
+                            Text(model.isSearching ? "Loading…" : "Load More Results")
+                        }
+                        .frame(minWidth: 140)
+                    }
                         .disabled(model.isSearching).padding(10)
                 }
             }
@@ -288,11 +325,16 @@ struct SearchView: View {
                             }
                             .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(FeedbackButtonStyle(appearance: .prominent))
                         Button { model.reveal(hit) } label: { Image(systemName: "folder") }
                             .help("Reveal in Finder (⌘R)").accessibilityLabel("Reveal in Finder")
-                        Button { model.copyPath(hit) } label: { Image(systemName: "doc.on.doc") }
-                            .help("Copy path").accessibilityLabel("Copy path")
+                        Button { copyPath(hit) } label: {
+                            Image(systemName: copiedPath == hit.path ? "checkmark" : "doc.on.doc")
+                                .foregroundStyle(copiedPath == hit.path ? Color.green : Color.primary)
+                                .frame(width: 14, height: 14)
+                        }
+                        .help(copiedPath == hit.path ? "Path copied" : "Copy path")
+                        .accessibilityLabel(copiedPath == hit.path ? "Path copied" : "Copy path")
                     }
                     .controlSize(.regular)
                     Divider()
@@ -351,6 +393,11 @@ struct SearchView: View {
         .font(.system(size: 11))
     }
 
+    private func copyPath(_ hit: SearchHit) {
+        model.copyPath(hit)
+        copiedPath = hit.path
+    }
+
     private var statusBar: some View {
         HStack(spacing: 8) {
             if model.isSearching { ProgressView().controlSize(.mini) }
@@ -394,6 +441,57 @@ struct SearchView: View {
             }
         }
         .padding(20).frame(width: 360)
+    }
+}
+
+/// Shared feedback for in-window actions; system menus and pickers retain their native behavior.
+struct FeedbackButtonStyle: ButtonStyle {
+    enum Appearance { case standard, subtle, prominent }
+    var appearance: Appearance = .standard
+    var isActive = false
+    var compact = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        Content(configuration: configuration, appearance: appearance, isActive: isActive, compact: compact)
+    }
+
+    private struct Content: View {
+        let configuration: ButtonStyleConfiguration
+        let appearance: Appearance
+        let isActive: Bool
+        let compact: Bool
+        @State private var hovered = false
+        @Environment(\.isEnabled) private var enabled
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+        private var highlighted: Bool { enabled && (hovered || configuration.isPressed) }
+
+        private var background: Color {
+            if appearance == .prominent {
+                return Color.accentColor.opacity(configuration.isPressed ? 0.75 : hovered ? 0.88 : 1)
+            }
+            let opacity = configuration.isPressed ? 0.16 : highlighted ? 0.09 : isActive ? 0.08 : appearance == .subtle ? 0 : 0.04
+            return (isActive ? Color.accentColor : Color.primary).opacity(opacity)
+        }
+
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, compact ? 5 : 10)
+                .padding(.vertical, compact ? 3 : 5)
+                .frame(minHeight: compact ? 24 : 28)
+                .foregroundStyle(appearance == .prominent ? Color.white : isActive ? Color.accentColor : Color.primary)
+                .background(background, in: RoundedRectangle(cornerRadius: 6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.primary.opacity(appearance == .subtle || appearance == .prominent ? 0 : highlighted ? 0.22 : 0.12))
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 6))
+                .opacity(enabled ? 1 : 0.45)
+                .scaleEffect(enabled && configuration.isPressed && !reduceMotion ? 0.96 : 1)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: highlighted)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
+                .onHover { hovered = $0 }
+        }
     }
 }
 

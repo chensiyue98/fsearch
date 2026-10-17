@@ -20,7 +20,14 @@ struct IndexStatusSection: View {
                 Button {
                     Task { await model.refreshIndexStatus() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    ZStack {
+                        if model.isRefreshingIndexStatus {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .frame(width: 14, height: 14)
                 }
                 .help("Refresh index status")
                 .accessibilityLabel("Refresh index status")

@@ -118,6 +118,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .buttonStyle(FeedbackButtonStyle())
         .padding()
         .frame(width: 560, height: 680)
         .background(SettingsVisibility { isVisible = $0 })
